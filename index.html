@@ -31,13 +31,20 @@
   .send { width: 100%; min-height: 58px; font: inherit; font-size: 1.15rem; font-weight: 700; color: #fff; background: #25d366; border: 0; border-radius: 12px; cursor: pointer; }
   .send:active, .add:active { transform: scale(.99); }
   .note { text-align: center; color: #4a524e; margin: 10px 0 0; }
+  .sub { margin: 0 0 6px 14px; padding: 4px 0 6px 14px; border-left: 3px solid var(--c); }
+  .sub .hint { margin: 4px 0 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 2px solid var(--line); border-radius: 22px; font-size: .95rem; cursor: pointer; user-select: none; background: #fff; }
+  .chip input { width: 20px; height: 20px; margin: 0; accent-color: var(--c); flex: none; }
+  .chip:has(input:checked) { border-color: var(--c); background: #e8f5ee; font-weight: 600; }
+  .sub input[type=text] { margin-top: 8px; padding: 10px; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
   <h1>Kurze Umfrage für Fahrschulen</h1>
-  <p class="intro">Dauert ca. 2 Minuten. Alles ist freiwillig.</p>
+  <p class="intro">Dauert 1–2 Minuten. Einfach antippen, alles freiwillig.</p>
 
   <section>
     <h2>1. Welche Programme oder Apps nutzt du?</h2>
@@ -49,8 +56,6 @@
     <h2>2. Was frisst die meiste Zeit oder nervt im Alltag?</h2>
     <p class="hint">Mehrfachauswahl möglich</p>
     <div class="opts" id="pain"></div>
-    <label class="t" for="why">Warum? Was könnte einfacher gehen?</label>
-    <textarea id="why"></textarea>
   </section>
 
   <section>
@@ -70,27 +75,34 @@
     </div>
     <input type="text" class="name" placeholder="z. B. Fahrschulcockpit, Excel …">
     <label class="t">Wofür nutzt du es?</label>
-    <p class="hint">Mehrfachauswahl möglich</p>
-    <div class="opts"></div>
+    <div class="chips"></div>
   </div>
 </template>
 
 <script>
 const USES = ["Schülerverwaltung", "Terminplanung/Fahrstunden", "Rechnungen/Zahlungen",
   "Kommunikation", "Theorie/Lernen", "Dokumentation", "Sonstiges"];
-const PAINS = ["Termine abstimmen/verschieben", "Nachrichten/Anrufe beantworten",
-  "Daten mehrfach eingeben", "Unterlagen suchen/nachhalten",
-  "Rechnungen/Zahlungen verfolgen", "Dokumentation", "Sonstiges"];
+const PAINS = {
+  "Termine abstimmen/verschieben": ["Absagen", "Ersatz finden", "Hin und her schreiben", "Prüfungstermine"],
+  "Nachrichten/Anrufe beantworten": ["Immer gleiche Fragen", "Anrufe beim Fahren", "Neue Anfragen"],
+  "Daten mehrfach eingeben": ["Anmeldungen", "Fahrstunden", "Rechnungsdaten", "Anträge"],
+  "Unterlagen suchen/nachhalten": ["Sehtest/Erste Hilfe", "Führerscheinantrag", "Verträge"],
+  "Rechnungen/Zahlungen verfolgen": ["Offene Zahlungen", "Mahnungen", "Rechnungen schreiben"],
+  "Dokumentation": ["Ausbildungsnachweis", "Tagesnachweise", "Fahrzeuge"],
+  "Sonstiges": []
+};
+
+function check(cls, v) {
+  const l = document.createElement("label");
+  l.className = cls;
+  l.innerHTML = '<input type="checkbox"><span></span>';
+  l.querySelector("input").value = v;
+  l.querySelector("span").textContent = v;
+  return l;
+}
 
 function fillOpts(box, list) {
-  for (const v of list) {
-    const l = document.createElement("label");
-    l.className = "opt";
-    l.innerHTML = '<input type="checkbox"><span></span>';
-    l.querySelector("input").value = v;
-    l.querySelector("span").textContent = v;
-    box.append(l);
-  }
+  for (const v of list) box.append(check("chip", v));
   const other = document.createElement("input");
   other.type = "text";
   other.className = "other";
@@ -112,7 +124,7 @@ function picked(box) {
 const progs = document.getElementById("progs");
 function addProg() {
   const el = document.getElementById("tpl").content.firstElementChild.cloneNode(true);
-  fillOpts(el.querySelector(".opts"), USES);
+  fillOpts(el.querySelector(".chips"), USES);
   el.querySelector(".rm").onclick = () => { el.remove(); updateRm(); };
   progs.append(el);
   updateRm();
@@ -124,14 +136,45 @@ function updateRm() {
 }
 addProg();
 document.getElementById("add").onclick = () => addProg().querySelector(".name").focus();
-fillOpts(document.getElementById("pain"), PAINS);
+const pain = document.getElementById("pain");
+for (const [v, subs] of Object.entries(PAINS)) {
+  const l = check("opt", v);
+  const cb = l.querySelector("input");
+  const sub = document.createElement("div");
+  sub.className = "sub";
+  sub.hidden = true;
+  if (subs.length) {
+    sub.innerHTML = '<p class="hint">Was genau?</p><div class="chips"></div>';
+    for (const s of subs) sub.querySelector(".chips").append(check("chip", s));
+  } else {
+    sub.innerHTML = '<input type="text" placeholder="Was genau?">';
+  }
+  const txt = sub.querySelector("input[type=text]");
+  cb.addEventListener("change", () => {
+    sub.hidden = !cb.checked;
+    if (cb.checked && !subs.length) txt.focus();
+  });
+  pain.append(l, sub);
+}
+
+function painLines() {
+  const out = [];
+  for (const sub of pain.querySelectorAll(".sub:not([hidden])")) {
+    const name = sub.previousElementSibling.querySelector("input").value;
+    const details = [...sub.querySelectorAll(".chip input:checked")].map(i => i.value);
+    const txt = sub.querySelector("input[type=text]")?.value.trim();
+    if (txt) details.push(txt);
+    out.push("• " + name + (details.length ? "\n   → " + details.join(", ") : ""));
+  }
+  return out;
+}
 
 function buildMessage() {
   const lines = ["*Umfrage Fahrschule*", "", "*1. Programme / Apps*"];
   let any = false;
   for (const p of progs.querySelectorAll(".prog")) {
     const name = p.querySelector(".name").value.trim();
-    const uses = picked(p.querySelector(".opts"));
+    const uses = picked(p.querySelector(".chips"));
     if (!name && !uses.length) continue;
     any = true;
     lines.push("• " + (name || "(ohne Namen)") + (uses.length ? "\n   Wofür: " + uses.join(", ") : ""));
@@ -139,10 +182,8 @@ function buildMessage() {
   if (!any) lines.push("–");
 
   lines.push("", "*2. Zeitfresser / Nervt*");
-  const pains = picked(document.getElementById("pain"));
-  lines.push(pains.length ? pains.map(p => "• " + p).join("\n") : "–");
-  const why = document.getElementById("why").value.trim();
-  if (why) lines.push("", "Warum / was einfacher gehen könnte:", why);
+  const pains = painLines();
+  lines.push(pains.length ? pains.join("\n") : "–");
 
   const more = document.getElementById("more").value.trim();
   lines.push("", "*3. Sonstiges*", more || "–");
