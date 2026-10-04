@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurze Umfrage: Programme im Fahrschul-Alltag</title>
+<style>
+  :root { --c: #0a7d4f; --bg: #f4f6f5; --line: #cfd8d3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 18px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #1b1f1d; }
+  main { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.4rem; margin: 4px 0 4px; }
+  .intro { margin: 0 0 20px; color: #4a524e; }
+  section { background: #fff; border-radius: 14px; padding: 18px 16px; margin-bottom: 16px; }
+  h2 { font-size: 1.15rem; margin: 0 0 12px; }
+  .hint { font-size: .9rem; color: #5b635f; margin: -6px 0 10px; }
+  label.t { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input[type=text], textarea { width: 100%; font: inherit; padding: 12px; border: 2px solid var(--line); border-radius: 10px; background: #fff; }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--c); }
+  textarea { min-height: 90px; resize: vertical; }
+  .opts { display: grid; gap: 8px; }
+  .opt { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 10px; cursor: pointer; user-select: none; }
+  .opt input { width: 26px; height: 26px; margin: 0; accent-color: var(--c); flex: none; }
+  .opt:has(input:checked) { border-color: var(--c); background: #e8f5ee; font-weight: 600; }
+  .other { margin-top: 8px; }
+  .prog { border: 2px dashed var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .prog label.t:first-child { margin-top: 0; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .rm { background: none; border: 0; color: #a33; font: inherit; font-size: .95rem; padding: 8px 0; cursor: pointer; }
+  .add { width: 100%; min-height: 52px; font: inherit; font-weight: 600; color: var(--c); background: #fff; border: 2px solid var(--c); border-radius: 10px; cursor: pointer; }
+  .send { width: 100%; min-height: 58px; font: inherit; font-size: 1.15rem; font-weight: 700; color: #fff; background: #25d366; border: 0; border-radius: 12px; cursor: pointer; }
+  .send:active, .add:active { transform: scale(.99); }
+  .note { text-align: center; color: #4a524e; margin: 10px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kurze Umfrage für Fahrschulen</h1>
+  <p class="intro">Dauert ca. 2 Minuten. Alles ist freiwillig.</p>
+
+  <section>
+    <h2>1. Welche Programme oder Apps nutzt du?</h2>
+    <div id="progs"></div>
+    <button type="button" class="add" id="add">+ Weiteres Programm hinzufügen</button>
+  </section>
+
+  <section>
+    <h2>2. Was frisst die meiste Zeit oder nervt im Alltag?</h2>
+    <p class="hint">Mehrfachauswahl möglich</p>
+    <div class="opts" id="pain"></div>
+    <label class="t" for="why">Warum? Was könnte einfacher gehen?</label>
+    <textarea id="why"></textarea>
+  </section>
+
+  <section>
+    <h2>3. Fällt dir noch etwas ein?</h2>
+    <textarea id="more" aria-label="Fällt dir noch etwas ein?"></textarea>
+  </section>
+
+  <button type="button" class="send" id="send">Per WhatsApp an Timo senden</button>
+  <p class="note">WhatsApp öffnet sich. Dort bitte Timo auswählen und auf Senden tippen.</p>
+</main>
+
+<template id="tpl">
+  <div class="prog">
+    <div class="row">
+      <label class="t">Programm / App</label>
+      <button type="button" class="rm">Entfernen</button>
+    </div>
+    <input type="text" class="name" placeholder="z. B. Fahrschulcockpit, Excel …">
+    <label class="t">Wofür nutzt du es?</label>
+    <p class="hint">Mehrfachauswahl möglich</p>
+    <div class="opts"></div>
+  </div>
+</template>
+
+<script>
+const USES = ["Schülerverwaltung", "Terminplanung/Fahrstunden", "Rechnungen/Zahlungen",
+  "Kommunikation", "Theorie/Lernen", "Dokumentation", "Sonstiges"];
+const PAINS = ["Termine abstimmen/verschieben", "Nachrichten/Anrufe beantworten",
+  "Daten mehrfach eingeben", "Unterlagen suchen/nachhalten",
+  "Rechnungen/Zahlungen verfolgen", "Dokumentation", "Sonstiges"];
+
+function fillOpts(box, list) {
+  for (const v of list) {
+    const l = document.createElement("label");
+    l.className = "opt";
+    l.innerHTML = '<input type="checkbox"><span></span>';
+    l.querySelector("input").value = v;
+    l.querySelector("span").textContent = v;
+    box.append(l);
+  }
+  const other = document.createElement("input");
+  other.type = "text";
+  other.className = "other";
+  other.placeholder = "Was genau?";
+  other.hidden = true;
+  box.append(other);
+  box.querySelector('input[value="Sonstiges"]').addEventListener("change", e => {
+    other.hidden = !e.target.checked;
+    if (e.target.checked) other.focus();
+  });
+}
+
+function picked(box) {
+  const vals = [...box.querySelectorAll("input:checked")].map(i => i.value);
+  const other = box.querySelector(".other").value.trim();
+  return vals.map(v => v === "Sonstiges" && other ? "Sonstiges: " + other : v);
+}
+
+const progs = document.getElementById("progs");
+function addProg() {
+  const el = document.getElementById("tpl").content.firstElementChild.cloneNode(true);
+  fillOpts(el.querySelector(".opts"), USES);
+  el.querySelector(".rm").onclick = () => { el.remove(); updateRm(); };
+  progs.append(el);
+  updateRm();
+  return el;
+}
+function updateRm() {
+  const all = progs.querySelectorAll(".prog");
+  all.forEach(p => p.querySelector(".rm").hidden = all.length < 2);
+}
+addProg();
+document.getElementById("add").onclick = () => addProg().querySelector(".name").focus();
+fillOpts(document.getElementById("pain"), PAINS);
+
+function buildMessage() {
+  const lines = ["*Umfrage Fahrschule*", "", "*1. Programme / Apps*"];
+  let any = false;
+  for (const p of progs.querySelectorAll(".prog")) {
+    const name = p.querySelector(".name").value.trim();
+    const uses = picked(p.querySelector(".opts"));
+    if (!name && !uses.length) continue;
+    any = true;
+    lines.push("• " + (name || "(ohne Namen)") + (uses.length ? "\n   Wofür: " + uses.join(", ") : ""));
+  }
+  if (!any) lines.push("–");
+
+  lines.push("", "*2. Zeitfresser / Nervt*");
+  const pains = picked(document.getElementById("pain"));
+  lines.push(pains.length ? pains.map(p => "• " + p).join("\n") : "–");
+  const why = document.getElementById("why").value.trim();
+  if (why) lines.push("", "Warum / was einfacher gehen könnte:", why);
+
+  const more = document.getElementById("more").value.trim();
+  lines.push("", "*3. Sonstiges*", more || "–");
+  return lines.join("\n");
+}
+
+document.getElementById("send").onclick = () => {
+  location.href = "https://wa.me/?text=" + encodeURIComponent(buildMessage());
+};
+</script>
+</body>
+</html>
