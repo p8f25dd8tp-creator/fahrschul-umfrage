@@ -144,15 +144,15 @@ for (const [v, subs] of Object.entries(PAINS)) {
   sub.className = "sub";
   sub.hidden = true;
   if (subs.length) {
-    sub.innerHTML = '<p class="hint">Was genau?</p><div class="chips"></div>';
-    for (const s of subs) sub.querySelector(".chips").append(check("chip", s));
+    sub.innerHTML = '<p class="hint">Was kostet dabei die Zeit oder nervt?</p><div class="chips"></div>';
+    fillOpts(sub.querySelector(".chips"), [...subs, "Sonstiges"]);
+    sub.querySelector(".other").placeholder = "Was genau kostet Zeit?";
   } else {
-    sub.innerHTML = '<input type="text" placeholder="Was genau?">';
+    sub.innerHTML = '<input type="text" placeholder="Was kostet Zeit oder nervt?">';
   }
-  const txt = sub.querySelector("input[type=text]");
   cb.addEventListener("change", () => {
     sub.hidden = !cb.checked;
-    if (cb.checked && !subs.length) txt.focus();
+    if (cb.checked && !subs.length) sub.querySelector("input").focus();
   });
   pain.append(l, sub);
 }
@@ -161,9 +161,9 @@ function painLines() {
   const out = [];
   for (const sub of pain.querySelectorAll(".sub:not([hidden])")) {
     const name = sub.previousElementSibling.querySelector("input").value;
-    const details = [...sub.querySelectorAll(".chip input:checked")].map(i => i.value);
-    const txt = sub.querySelector("input[type=text]")?.value.trim();
-    if (txt) details.push(txt);
+    const chips = sub.querySelector(".chips");
+    const txt = sub.querySelector("input[type=text]").value.trim();
+    const details = chips ? picked(chips) : txt ? [txt] : [];
     out.push("• " + name + (details.length ? "\n   → " + details.join(", ") : ""));
   }
   return out;
