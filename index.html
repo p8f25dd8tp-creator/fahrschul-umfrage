@@ -44,7 +44,8 @@
 <body>
 <main>
   <h1>Kurze Umfrage für Fahrschulen</h1>
-  <p class="intro">Dauert 1–2 Minuten. Einfach antippen, alles freiwillig.</p>
+  <p class="intro">Dauert 1–2 Minuten. Einfach antippen, alles freiwillig.<br>
+    Keine Lust zu tippen? Auf der Tastatur das 🎤 drücken und reinsprechen.</p>
 
   <section>
     <h2>1. Welche Programme oder Apps nutzt du?</h2>
@@ -83,12 +84,36 @@
 const USES = ["Schülerverwaltung", "Terminplanung/Fahrstunden", "Rechnungen/Zahlungen",
   "Kommunikation", "Theorie/Lernen", "Dokumentation", "Sonstiges"];
 const PAINS = {
-  "Termine abstimmen/verschieben": ["Absagen", "Ersatz finden", "Hin und her schreiben", "Prüfungstermine"],
-  "Nachrichten/Anrufe beantworten": ["Immer gleiche Fragen", "Anrufe beim Fahren", "Neue Anfragen"],
-  "Daten mehrfach eingeben": ["Anmeldungen", "Fahrstunden", "Rechnungsdaten", "Anträge"],
-  "Unterlagen suchen/nachhalten": ["Sehtest/Erste Hilfe", "Führerscheinantrag", "Verträge"],
-  "Rechnungen/Zahlungen verfolgen": ["Offene Zahlungen", "Mahnungen", "Rechnungen schreiben"],
-  "Dokumentation": ["Ausbildungsnachweis", "Tagesnachweise", "Fahrzeuge"],
+  "Termine abstimmen/verschieben": [
+    "Schüler sagt kurzfristig ab, Lücke im Plan",
+    "Ersatz suchen: alle anschreiben, keiner kann",
+    "Ewiges Hin und Her, bis ein Termin passt",
+    "Terminanfragen kommen, während ich fahre",
+    "Prüfungstermine mit Schüler und Prüfer abstimmen"],
+  "Nachrichten/Anrufe beantworten": [
+    "Anruf während der Fahrstunde, muss mich auf vieles gleichzeitig konzentrieren",
+    "Abends noch Nachrichten beantworten",
+    "Immer wieder dieselben Fragen (Preise, Ablauf)",
+    "Nachrichten über viele Kanäle verteilt"],
+  "Daten mehrfach eingeben": [
+    "Anmeldung von Papier ins Programm abtippen",
+    "Fahrstunden erst nachträglich eintragen",
+    "Gleiche Daten in mehreren Programmen",
+    "Daten für Rechnungen nochmal eintippen"],
+  "Unterlagen suchen/nachhalten": [
+    "Sehtest, Erste Hilfe, Passbild hinterherlaufen",
+    "Unklar, was beim Schüler noch fehlt",
+    "Führerscheinantrag/Behörde dauert",
+    "Papiere liegen verstreut"],
+  "Rechnungen/Zahlungen verfolgen": [
+    "Prüfen, wer schon bezahlt hat",
+    "Offenen Beträgen hinterherlaufen",
+    "Mahnungen schreiben",
+    "Barzahlungen nachhalten"],
+  "Dokumentation": [
+    "Ausbildungsnachweis nach jeder Stunde ausfüllen",
+    "Nachweise nach Feierabend nachtragen",
+    "Papier und Programm doppelt führen"],
   "Sonstiges": []
 };
 
@@ -144,11 +169,11 @@ for (const [v, subs] of Object.entries(PAINS)) {
   sub.className = "sub";
   sub.hidden = true;
   if (subs.length) {
-    sub.innerHTML = '<p class="hint">Was kostet dabei die Zeit oder nervt?</p><div class="chips"></div>';
+    sub.innerHTML = '<p class="hint">Was nervt daran genau?</p><div class="chips"></div>';
     fillOpts(sub.querySelector(".chips"), [...subs, "Sonstiges"]);
-    sub.querySelector(".other").placeholder = "Was genau kostet Zeit?";
+    sub.querySelector(".other").placeholder = "Situation kurz beschreiben oder 🎤";
   } else {
-    sub.innerHTML = '<input type="text" placeholder="Was kostet Zeit oder nervt?">';
+    sub.innerHTML = '<input type="text" placeholder="Situation kurz beschreiben oder 🎤">';
   }
   cb.addEventListener("change", () => {
     sub.hidden = !cb.checked;
@@ -164,7 +189,7 @@ function painLines() {
     const chips = sub.querySelector(".chips");
     const txt = sub.querySelector("input[type=text]").value.trim();
     const details = chips ? picked(chips) : txt ? [txt] : [];
-    out.push("• " + name + (details.length ? "\n   → " + details.join(", ") : ""));
+    out.push("• " + name + (details.length ? "\n   → " + details.join("\n   → ") : ""));
   }
   return out;
 }
